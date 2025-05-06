@@ -2,7 +2,6 @@ package com.example.service;
 
 import com.example.entity.QRCode;
 import com.example.repository.QRCodeRepository;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -88,7 +87,6 @@ public class QRCodeServiceTest {
         sampleQRCode.setIdentityDocument("123456789");
         sampleQRCode.setVaccinationDate(LocalDate.of(2023, 1, 1));
 
-        when(qrCodeRepository.findByVaccinationId(42L)).thenReturn(Optional.empty());
         when(qrCodeRepository.save(sampleQRCode)).thenReturn(sampleQRCode);
 
         QRCode saved = qrCodeService.save(sampleQRCode);
@@ -96,5 +94,30 @@ public class QRCodeServiceTest {
         assertNotNull(saved);
         assertEquals(sampleQRCode.getId(), saved.getId());
         verify(qrCodeRepository, times(1)).save(sampleQRCode);
+    }
+
+    @Test
+    public void testSave_WhenQRCodeIsNotUnique_ShouldNotSaveSuccessfully() {
+        QRCode sampleQRCode = new QRCode();
+        sampleQRCode.setId(1L);
+        sampleQRCode.setHash("abc123");
+        sampleQRCode.setVaccinationId(42L);
+        sampleQRCode.setIdentityDocument("123456789");
+        sampleQRCode.setVaccineName("Спутник V");
+        sampleQRCode.setVaccinationDate(LocalDate.of(2023, 1, 1));
+
+        when(qrCodeRepository.findByIdentityDocumentAndVaccineNameAndVaccinationDate(
+                "123456789",
+                "Спутник V",
+                LocalDate.of(2023, 1, 1))
+        )
+                .thenReturn(Optional.of(sampleQRCode));
+
+        QRCode saved = qrCodeService.save(sampleQRCode);
+
+        assertNotNull(saved);
+        assertEquals(sampleQRCode.getId(), saved.getId());
+        assertEquals(sampleQRCode.getHash(), saved.getHash());
+        verify(qrCodeRepository, times(0)).save(sampleQRCode);
     }
 }
